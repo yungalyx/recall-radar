@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recall Radar · simulated Alexa+</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ctext y=%2714%27 font-size=%2714%27%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#0b0f14;--panel:#121820;--line:#243040;--text:#e6edf3;--muted:#8b949e;--blue:#31c3f0;--red:#f85149;--amber:#d29922;--green:#3fb950}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;flex:1}header h1 small{color:var(--muted);font-weight:400;margin-left:8px}
+main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,1fr);gap:20px;padding:20px;max-width:1280px;margin:0 auto}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.echo{background:#111;border-radius:28px;padding:22px 22px 34px;box-shadow:0 20px 60px #000a,inset 0 0 0 2px #2a2a2a;position:relative;align-self:start}
+.echo::after{content:"";position:absolute;left:50%;bottom:12px;width:120px;height:6px;margin-left:-60px;border-radius:3px;background:#1a1a1a}
+.screen{aspect-ratio:16/10;background:radial-gradient(120% 100% at 30% 0%,#1d3a63,#0a1424 60%);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.bar{display:flex;justify-content:space-between;padding:10px 16px;font-size:12px;color:#c9d1d9}
+.content{flex:1;overflow:auto;padding:4px 16px 16px}
+.alexa{height:4px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0;transition:opacity .2s}
+.thinking .alexa{opacity:1;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.3}}
+.say{font-size:20px;font-weight:600;margin:6px 0 12px}.sub{color:#c9d1d9;font-size:13px;margin:0 0 8px}
+.card{background:#ffffff14;border:1px solid #ffffff22;border-radius:12px;padding:12px 14px;margin:8px 0;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.card img{width:72px;height:72px;object-fit:cover;border-radius:8px;background:#000}.card .ph{width:72px;height:72px;border-radius:8px;background:#ffffff10;display:grid;place-items:center;font-size:28px}
+.card h3{margin:0 0 4px;font-size:15px}.card p{margin:2px 0;font-size:13px;color:#c9d1d9}.card a{color:var(--blue)}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;margin-right:6px}
+.high{background:var(--red);color:#fff}.medium{background:var(--amber);color:#000}.low{background:#30363d;color:#fff}.ok{background:var(--green);color:#000}
+.steps{padding-left:18px;margin:6px 0;font-size:13px}.steps li{margin:3px 0}
+.chat{background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;min-height:420px;max-height:80vh}
+.log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:8px 12px;border-radius:12px;white-space:pre-wrap;font-size:14px}.me{align-self:flex-end;background:#1f6feb;color:#fff}.bot{align-self:flex-start;background:#1c2530}.err{align-self:flex-start;background:#3d1f1f}
+form.input{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+form.input input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1117;color:var(--text);font-size:15px}
+button{padding:8px 14px;border:0;border-radius:10px;background:#1f6feb;color:#fff;font-weight:600;cursor:pointer}button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+.hint{font-size:12px;color:var(--muted);padding:0 14px 10px}.hint button{background:#0d1117;border:1px solid var(--line);color:var(--text);font-weight:400;font-size:12px;padding:3px 8px;margin:2px 4px 2px 0}
+#mic{font-size:16px;line-height:1}#mic.on{background:var(--red);border-color:var(--red);color:#fff;animation:mic 1.2s ease-in-out infinite}
+@keyframes mic{50%{opacity:.55}}
+.partial{align-self:flex-end;background:#1f6feb;color:#fff;opacity:.5;font-style:italic}
+</style></head><body>
+<header><h1>Recall Radar <small>simulated Alexa+ · MCP 2025-11-25 · Streamable HTTP</small></h1>
+<a class="ghost" href="/.well-known/oauth-authorization-server" style="color:var(--muted);font-size:12px">AS metadata</a>
+<button id="auth" class="ghost">Sign in</button></header>
+<main>
+  <div class="echo"><div class="screen" id="screen"><div class="bar"><span id="clock"></span><span>Recall Radar</span></div><div class="content" id="content"></div><div class="alexa"></div></div></div>
+  <section class="chat">
+    <div class="log" id="log"></div>
+    <div class="hint" id="hints">Try:</div>
+    <form class="input" id="form"><button type="button" id="mic" class="ghost" title="Hold a conversation — AssemblyAI streaming speech-to-text">🎤</button><input id="q" placeholder='Say something, e.g. "Alexa, is anything in my house recalled?"' autocomplete="off"><input type="file" id="csv" accept=".csv,text/csv" hidden><button>Send</button></form>
+  </section>
+</main>
+<script type="module">
+import { route, HELP } from '/intent.js';
+const CLIENT_ID = 'recall-radar-web', REDIRECT = location.origin + '/';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const b64u = (b) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }, 1000);
+
+// ---- OAuth 2.0 authorization code + PKCE (S256) against our own AS ----
+const tokens = () => JSON.parse(localStorage.tokens || 'null');
+async function login() {
+  const v = b64u(crypto.getRandomValues(new Uint8Array(32))); sessionStorage.pkce = v;
+  const c = b64u(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)));
+  const state = b64u(crypto.getRandomValues(new Uint8Array(8))); sessionStorage.state = state;
+  location.href = '/authorize?' + new URLSearchParams({ response_type: 'code', client_id: CLIENT_ID, redirect_uri: REDIRECT, code_challenge: c, code_challenge_method: 'S256', state, scope: 'household', resource: location.origin + '/mcp' });
+}
+async function tokenPost(params) {
+  const r = await fetch('/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: CLIENT_ID, ...params }) });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error_description || j.error);
+  localStorage.tokens = JSON.stringify(j); return j;
+}
+async function handleRedirect() {
+  const q = new URLSearchParams(location.search); if (!q.get('code')) return;
+  if (q.get('state') !== sessionStorage.state) throw new Error('OAuth state mismatch');
+  await tokenPost({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: REDIRECT, code_verifier: sessionStorage.pkce });
+  history.replaceState({}, '', '/');
+}
+async function refresh() { const t = tokens(); if (!t?.refresh_token) return false; try { await tokenPost({ grant_type: 'refresh_token', refresh_token: t.refresh_token }); return true; } catch { localStorage.removeItem('tokens'); return false; } }
+const logout = () => { localStorage.removeItem('tokens'); sid = null; ui(); };
+
+// ---- MCP client over Streamable HTTP (single /mcp endpoint, Mcp-Session-Id, JSON or SSE responses) ----
+let sid = null, rpcId = 1;
+async function post(msg, retry = true) {
+  const t = tokens(); if (!t) throw new Error('Sign in first');
+  const r = await fetch('/mcp', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'mcp-protocol-version': '2025-11-25', authorization: 'Bearer ' + t.access_token, ...(sid && { 'mcp-session-id': sid }) }, body: JSON.stringify(msg) });
+  if (r.status === 401 && retry) { if (await refresh()) return post(msg, false); logout(); throw new Error('Session expired — sign in again'); }
+  if (r.status === 404 && sid && retry) { sid = null; await init(); return post(msg, false); } // server restarted: new session
+  sid = r.headers.get('mcp-session-id') || sid;
+  if (r.status === 202) return null;
+  const text = await r.text();
+  const j = JSON.parse((r.headers.get('content-type') || '').includes('text/event-stream') ? text.split('\n').filter((l) => l.startsWith('data:')).pop().slice(5) : text);
+  if (j.error) throw new Error(j.error.message); return j.result;
+}
+async function init() {
+  await post({ jsonrpc: '2.0', id: rpcId++, method: 'initialize', params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'recall-radar-web', version: '0.1.0' } } });
+  await post({ jsonrpc: '2.0', method: 'notifications/initialized' });
+}
+async function tool(name, args = {}) {
+  if (!sid) await init();
+  const r = await post({ jsonrpc: '2.0', id: rpcId++, method: 'tools/call', params: { name, arguments: args } });
+  if (r.isError) throw new Error(r.content[0].text);
+  return { text: r.content[0].text, data: r.structuredContent };
+}
+
+let lastMatches = [];
+
+// ---- rendering ----
+const log = (cls, text) => { const d = document.createElement('div'); d.className = 'msg ' + cls; d.textContent = text; $('#log').append(d); d.scrollIntoView(); };
+const show = (html) => { $('#content').innerHTML = html; };
+const badge = (m) => `<span class="badge ${m.level}">${m.level} ${Math.round(m.confidence * 100)}%</span>`;
+const itemCards = (items) => items.map((i) => `<div class="card"><div class="ph">${{ vehicle: '🚗', food: '🥫', drug: '💊', device: '🩺' }[i.category] || '📦'}</div><div><h3>#${i.id} ${esc(i.name)}</h3><p>${esc([i.brand, i.model, i.category, i.purchased_on].filter(Boolean).join(' · '))}</p></div></div>`).join('');
+const RENDER = {
+  add_item: ({ text, data }) => `<p class="say">Got it.</p>${itemCards([data.item])}<p class="sub">Say "is anything recalled?" to check it.</p>`,
+  remove_item: ({ data }) => `<p class="say">Removed #${data.removed.id}.</p>`,
+  list_items: ({ data }) => data.items.length ? `<p class="say">You have ${data.items.length} item${data.items.length > 1 ? 's' : ''}.</p>${itemCards(data.items)}` : `<p class="say">Your inventory is empty.</p><p class="sub">Say "add ..." or "import my orders".</p>`,
+  import_orders: ({ data }) => `<p class="say">Imported ${data.imported} item${data.imported === 1 ? '' : 's'}.</p>${itemCards(data.items.slice(0, 6))}${data.items.length > 6 ? `<p class="sub">…and ${data.items.length - 6} more.</p>` : ''}`,
+  check_recalls: ({ data }) => {
+    lastMatches = data.matches;
+    if (!data.matches.length) return `<p class="say"><span class="badge ok">all clear</span> No recalls matched your ${data.checked} item${data.checked === 1 ? '' : 's'}.</p>`;
+    return `<p class="say">${data.matches.length} possible recall${data.matches.length > 1 ? 's' : ''} found.</p>` + data.matches.map((m, i) => `<div class="card">${m.image ? `<img src="${esc(m.image)}" alt="">` : `<div class="ph">⚠️</div>`}<div><h3>${i + 1}. ${esc(m.title)}</h3><p>${badge(m)} #${m.item_id} ${esc(m.item)} · ${m.source.toUpperCase()} · ${esc(m.date)}</p><p>${esc(m.reason)}</p><p class="sub">Say "details ${i + 1}" or "help me fix ${i + 1}"</p></div></div>`).join('');
+  },
+  recall_details: ({ data: { recall: r } }) => `<div class="card">${r.image ? `<img src="${esc(r.image)}" alt="">` : `<div class="ph">⚠️</div>`}<div><h3>${esc(r.title)}</h3><p><b>Hazard:</b> ${esc(r.hazard)}</p><p><b>Remedy:</b> ${esc(r.remedy)}</p><p><b>Contact:</b> ${esc(r.contact)}</p><p><a href="${esc(r.url)}" target="_blank" rel="noopener">Official recall notice</a> · ${esc(r.date)}</p></div></div>`,
+  start_remedy: ({ data }) => `<p class="say">Let's fix it — ${esc(data.path)}.</p><div class="card"><div class="ph">🛠️</div><div><h3>${esc(data.title)}</h3><ol class="steps">${data.steps.map((s) => `<li><b>${esc(s.title)}</b> — ${esc(s.detail)}</li>`).join('')}</ol><p>${data.phone ? `📞 ${esc(data.phone)} · ` : ''}<a href="${esc(data.web.startsWith('http') ? data.web : 'https://' + data.web)}" target="_blank" rel="noopener">${esc(data.web)}</a></p><p class="sub">Reminder set for ${esc(data.reminder.on)}: ${esc(data.reminder.text)}</p></div></div>`,
+};
+
+// What the assistant says out loud. The MCP text replies are written to be read, not heard --
+// they carry ids, percentages and bullet lists -- so voice gets its own one-or-two-sentence form.
+const ordinal = (n) => ['one', 'two', 'three', 'four', 'five'][n] || `number ${n + 1}`;
+const SPEAK = {
+  add_item: ({ data }) => `Added ${data.item.name}. Say "is anything recalled" and I'll check it.`,
+  remove_item: ({ data }) => `Removed ${data.removed.name}.`,
+  list_items: ({ data }) => data.items.length
+    ? `You have ${data.items.length} item${data.items.length > 1 ? 's' : ''}, including ${data.items.slice(0, 3).map((i) => i.name).join(', ')}.`
+    : `Your inventory is empty. Say "add" and the name of something you own.`,
+  import_orders: ({ data }) => `Imported ${data.imported} item${data.imported === 1 ? '' : 's'} from your orders.`,
+  check_recalls: ({ data }) => {
+    if (!data.matches.length) return `Good news. Nothing in your ${data.checked} item${data.checked === 1 ? '' : 's'} is recalled.`;
+    const m = data.matches[0];
+    return `I found ${data.matches.length} possible recall${data.matches.length > 1 ? 's' : ''}. `
+      + `The closest is your ${m.item}: ${m.title}. That's ${m.level} confidence, because ${m.reason}. `
+      + `Say "details one" to hear the hazard, or "help me fix one" to start the remedy.`;
+  },
+  recall_details: ({ data: { recall: r } }) => `${r.title}. The hazard is: ${r.hazard} The remedy is: ${r.remedy}`,
+  start_remedy: ({ data }) => `Here's the plan — ${data.path}. ${data.steps[0].title}: ${data.steps[0].detail} `
+    + `I'll remind you on ${data.reminder.on}.`,
+};
+
+async function handle(text) {
+  log('me', text);
+  $('#screen').classList.add('thinking');
+  try {
+    const intent = route(text, lastMatches);
+    if (!intent) { log('bot', HELP); say(HELP); show(`<p class="say">Here's what I can do.</p><p class="sub">${esc(HELP)}</p>`); return; }
+    const [name, args] = intent;
+    if (name === 'import') { $('#csv').click(); return; }
+    const res = await tool(name, args);
+    log('bot', res.text); show(RENDER[name](res));
+    say(SPEAK[name] ? SPEAK[name](res) : res.text);
+  } catch (e) { log('err', e.message); say(`Sorry. ${e.message}`); show(`<p class="say">Sorry, ${esc(e.message)}</p>`); }
+  finally { $('#screen').classList.remove('thinking'); }
+}
+// ---- voice: AssemblyAI Universal-Streaming in, browser speech synthesis out ----
+// Audio goes browser → AssemblyAI directly; this server only mints the short-lived token, so it
+// never handles microphone data and the API key never reaches the page.
+const SAMPLE_RATE = 16000;
+let voice = null;
+
+function say(text) {
+  if (!text || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.05;
+  speechSynthesis.speak(u);
+}
+
+// Float32 frames → 16-bit PCM, in an AudioWorklet so the page stays a single file.
+const PCM_WORKLET = URL.createObjectURL(new Blob([`
+class PCM extends AudioWorkletProcessor {
+  process(inputs) {
+    const ch = inputs[0][0];
+    if (ch) {
+      const pcm = new Int16Array(ch.length);
+      for (let i = 0; i < ch.length; i++) {
+        const s = Math.max(-1, Math.min(1, ch[i]));
+        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      this.port.postMessage(pcm, [pcm.buffer]);
+    }
+    return true;
+  }
+}
+registerProcessor('pcm', PCM);
+`], { type: 'application/javascript' }));
+
+const partial = (text) => {
+  let el = $('#log .partial');
+  if (!text) { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'msg partial'; $('#log').append(el); }
+  el.textContent = text; el.scrollIntoView();
+};
+
+async function micOn() {
+  const t = tokens();
+  if (!t) { log('err', 'Sign in first — the voice token is issued to your household.'); return; }
+  const r = await fetch('/stt-token', { headers: { authorization: 'Bearer ' + t.access_token } });
+  if (!r.ok) throw new Error((await r.json()).error_description || 'could not start voice');
+  const { token } = await r.json();
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  await ctx.audioWorklet.addModule(PCM_WORKLET);
+  const ws = new WebSocket(`wss://streaming.assemblyai.com/v3/ws?sample_rate=${SAMPLE_RATE}&format_turns=true&token=${encodeURIComponent(token)}`);
+  ws.binaryType = 'arraybuffer';
+  voice = { ws, ctx, stream };
+  $('#mic').classList.add('on');
+
+  const node = new AudioWorkletNode(ctx, 'pcm');
+  node.port.onmessage = (e) => { if (ws.readyState === WebSocket.OPEN) ws.send(e.data); };
+  const mute = new GainNode(ctx, { gain: 0 }); // keeps the graph pulling without echoing the mic
+  ctx.createMediaStreamSource(stream).connect(node).connect(mute).connect(ctx.destination);
+
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type !== 'Turn') return;
+    partial(m.transcript);
+    // format_turns=true sends an unformatted turn first, then the punctuated one. Act on the latter.
+    if (m.end_of_turn && m.turn_is_formatted && m.transcript.trim()) { partial(''); handle(m.transcript.trim()); }
+  };
+  ws.onerror = () => { log('err', 'Voice connection failed.'); micOff(); };
+  ws.onclose = (e) => { if (voice) { if (e.code !== 1000) log('err', `Voice ended (${e.code}${e.reason ? ': ' + e.reason : ''}).`); micOff(); } };
+}
+
+function micOff() {
+  const v = voice; voice = null;
+  $('#mic').classList.remove('on'); partial('');
+  if (!v) return;
+  if (v.ws.readyState === WebSocket.OPEN) { v.ws.send(JSON.stringify({ type: 'Terminate' })); v.ws.close(1000); }
+  v.stream.getTracks().forEach((t) => t.stop());
+  v.ctx.close();
+}
+
+$('#mic').onclick = async () => {
+  if (voice) return micOff();
+  try { await micOn(); } catch (e) { log('err', e.message); micOff(); }
+};
+
+$('#form').onsubmit = (e) => { e.preventDefault(); const t = $('#q').value.trim(); $('#q').value = ''; if (t) handle(t); };
+$('#csv').onchange = async () => {
+  const f = $('#csv').files[0]; if (!f) return; $('#csv').value = '';
+  $('#screen').classList.add('thinking');
+  try { const res = await tool('import_orders', { csv_text: await f.text() }); log('bot', res.text); show(RENDER.import_orders(res)); }
+  catch (e) { log('err', e.message); } finally { $('#screen').classList.remove('thinking'); }
+};
+for (const h of ['add Graco 4Ever car seat', 'add 2020 Honda Civic', 'import my orders', 'what do I own', 'is anything in my house recalled?', 'details 1', 'help me fix 1']) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = h; b.onclick = () => handle(h); $('#hints').append(b);
+}
+function ui() {
+  const t = tokens();
+  $('#auth').textContent = t ? 'Sign out' : 'Sign in';
+  $('#auth').onclick = t ? logout : login;
+  show(t ? `<p class="say">Hi! Ask me about recalls.</p><p class="sub">${esc(HELP)}</p>` : `<p class="say">Link your household to begin.</p><p class="sub">Sign in (top right) — OAuth 2.0 authorization code + PKCE S256 against this server's own authorization server.</p>`);
+}
+handleRedirect().then(ui).catch((e) => { log('err', e.message); ui(); });
+</script></body></html>

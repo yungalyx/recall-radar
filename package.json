@@ -1,0 +1,16 @@
+{
+  "name": "recall-radar",
+  "version": "0.1.0",
+  "description": "\"Alexa, is anything in my house recalled?\" — MCP server (2025-11-25, Streamable HTTP) + OAuth 2.0 AS + simulated Alexa+ web client over CPSC/NHTSA/openFDA recall data.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test 'test/**/*.test.js'"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.1.0"
+  }
+}
