@@ -98,14 +98,14 @@ ASSEMBLYAI_API_KEY=... node scripts/voice-smoke.mjs speech.raw
 ```
 
 One Node process, no build step, no Docker. Storage is a single SQLite file via the built-in
-`node:sqlite` (Node ≥24) — no native modules, deployable to any free-tier Node host.
+`node:sqlite` (Node ≥22.5; pinned to 22 for the build system) — no native modules, deployable to any free-tier Node host.
 
 ## Run it
 
 ```
 npm install
 npm start                 # PORT (default 8787), open http://localhost:8787
-npm test                  # node:test — 16 tests, offline (fixtures in test/fixtures/)
+npm test                  # node:test — 25 tests, offline (fixtures in test/fixtures/)
 ```
 
 ### Environment variables (all optional, sane defaults)
@@ -167,6 +167,17 @@ Railway gives you a persistent container and a volume, which is exactly what thi
 4. Generate a domain (Settings → Networking), then set `PUBLIC_URL` to it and redeploy — OAuth
    metadata and redirect URIs are built from it, so it has to match the address you actually visit.
 5. Check `GET /health` → `{"ok":true,"voice":true}`. `voice:false` means the key is not set.
+6. Prove it end to end the way a judge's browser will hit it:
+   `node scripts/live-smoke.mjs https://<app>.up.railway.app` — logs in over PKCE, runs an MCP
+   handshake with the browser's `Origin`, lists tools, and mints a voice token. Fails loudly if
+   `PUBLIC_URL` is wrong: without it the server advertises `http://localhost:8080`, registers the
+   web client's redirect URI as localhost, and rejects every browser call to `/mcp` as a foreign
+   Origin — so the page loads but nothing works.
+
+   **If you sync variables from Doppler:** pick the *service* as the sync target, not "Shared".
+   Shared goes to Railway's project-level shared variables, which a service only sees once each
+   one is referenced (`${{shared.NAME}}`); the symptom is a green deploy with `voice:false` and
+   the localhost issuer above.
 
 **HTTPS is not optional for voice.** Browsers only grant microphone access on a secure origin
 (`localhost` is the exception), so the mic button will not work over plain HTTP.

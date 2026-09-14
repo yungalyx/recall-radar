@@ -1,8 +1,11 @@
 // SQLite storage (node:sqlite, built into Node 24). One file, one schema, no migrations.
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 /** @param {string} [path] file path or ':memory:' */
 export function openDb(path = process.env.DB_PATH || 'recall-radar.db') {
+  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true }); // DB_PATH=/data/x.db must not crash boot before the volume exists
   const db = new DatabaseSync(path);
   db.exec(`
     pragma journal_mode = wal;
