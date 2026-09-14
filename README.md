@@ -142,7 +142,17 @@ Railway gives you a persistent container and a volume, which is exactly what thi
 ### Railway, start to finish
 
 1. New Project → Deploy from GitHub repo → pick this repo. Nixpacks detects Node and runs
-   `npm start`; `.node-version` pins Node 24, which `node:sqlite` requires.
+   `npm start`.
+
+   **Node version is pinned to 22 on purpose, in three places that must agree** — `engines.node`
+   in `package.json`, `.nvmrc` and `.node-version`. Nixpacks accepts only an explicit major
+   (`22.x`, not `>=22`), reads `engines.node` *before* `.nvmrc`, and **silently falls back to
+   Node 18 when it cannot parse one**. Node 18 has no `node:sqlite`, so the app would die on its
+   first import with a build that otherwise looked fine. Node 22.5+ is the real floor; the suite
+   is verified green on both 22 and 24.
+
+   Developing on Node 24 is fine — `npm install` prints a cosmetic `EBADENGINE` warning because
+   the pin is deliberately narrow for the build system. It does not block anything.
 2. Add a **Volume** mounted at `/data`.
 3. Set variables (Settings → Variables):
 
