@@ -170,10 +170,12 @@ Railway gives you a persistent container and a volume, which is exactly what thi
 
 ### Optional: a Vercel front in front of it
 
-Some hackathon rulebooks list Vercel as an accepted demo platform. `vercel.json` proxies every path to
-the Railway process, which keeps the MCP sessions and the SQLite file where they must live. Import the
-repo into Vercel with the **Other** preset and no build command, then set `ALLOWED_ORIGINS` on the
-Railway side to the Vercel URL (e.g. `https://recall-radar-voice.vercel.app`): that whitelists the
+Some hackathon rulebooks list Vercel as an accepted demo platform. `vercel.json` serves `public/` as static
+files and proxies every other path to the Railway process, which keeps the MCP sessions and the SQLite
+file where they must live. It pins `framework: null` with no install or build step: left to detection,
+Vercel turns `package.json`'s `start` script into a serverless function for `/`, which fails on boot
+(500 `FUNCTION_INVOCATION_FAILED`) because this server listens on a port and needs a disk. Just import
+the repo; then set `ALLOWED_ORIGINS` on the Railway side to the Vercel URL (e.g. `https://recall-radar-voice.vercel.app`): that whitelists the
 origin for `/mcp` *and* registers it as a redirect URI for the web client's PKCE flow. Nothing runs on
 Vercel; it is a door, not a second deployment.
 6. Prove it end to end the way a judge's browser will hit it:
