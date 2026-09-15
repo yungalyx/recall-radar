@@ -69,5 +69,5 @@ export function route(text, lastMatches = []) {
   return null;
 }
 
-export const HELP = 'I can: "add Graco 4Ever car seat", "add 2022 Honda Odyssey", "import my orders", '
+export const HELP = 'I can: "add Stanley travel mug", "add 2022 Honda Odyssey", "import my orders", '
   + '"what do I own", "remove item two", "is anything recalled?", "details one", "help me fix one".';

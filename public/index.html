@@ -249,7 +249,7 @@ $('#csv').onchange = async () => {
   try { const res = await tool('import_orders', { csv_text: await f.text() }); log('bot', res.text); show(RENDER.import_orders(res)); }
   catch (e) { log('err', e.message); } finally { $('#screen').classList.remove('thinking'); }
 };
-for (const h of ['add Graco 4Ever car seat', 'add 2020 Honda Civic', 'import my orders', 'what do I own', 'is anything in my house recalled?', 'details 1', 'help me fix 1']) {
+for (const h of ['add Stanley travel mug', 'add 2020 Honda Civic', 'import my orders', 'what do I own', 'is anything in my house recalled?', 'details 1', 'help me fix 1']) {
   const b = document.createElement('button'); b.type = 'button'; b.textContent = h; b.onclick = () => handle(h); $('#hints').append(b);
 }
 function ui() {

@@ -167,6 +167,15 @@ Railway gives you a persistent container and a volume, which is exactly what thi
 4. Generate a domain (Settings → Networking), then set `PUBLIC_URL` to it and redeploy — OAuth
    metadata and redirect URIs are built from it, so it has to match the address you actually visit.
 5. Check `GET /health` → `{"ok":true,"voice":true}`. `voice:false` means the key is not set.
+
+### Optional: a Vercel front in front of it
+
+Some hackathon rulebooks list Vercel as an accepted demo platform. `vercel.json` proxies every path to
+the Railway process, which keeps the MCP sessions and the SQLite file where they must live. Import the
+repo into Vercel with the **Other** preset and no build command, then set `ALLOWED_ORIGINS` on the
+Railway side to the Vercel URL (e.g. `https://recall-radar-voice.vercel.app`): that whitelists the
+origin for `/mcp` *and* registers it as a redirect URI for the web client's PKCE flow. Nothing runs on
+Vercel; it is a door, not a second deployment.
 6. Prove it end to end the way a judge's browser will hit it:
    `node scripts/live-smoke.mjs https://<app>.up.railway.app` — logs in over PKCE, runs an MCP
    handshake with the browser's `Origin`, lists tools, and mints a voice token. Fails loudly if

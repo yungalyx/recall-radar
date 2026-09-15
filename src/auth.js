@@ -50,7 +50,10 @@ export function prMetadata(base) {
 /** Seed the two well-known clients: the bundled web client (public/PKCE) and the Alexa+ service client (confidential). */
 export function seedClients(db, base) {
   const up = db.prepare('insert or replace into oauth_clients(id, secret, redirect_uris, name) values (?,?,?,?)');
-  up.run('recall-radar-web', null, JSON.stringify([`${base}/`]), 'Recall Radar web client');
+  // A front end served from another origin (e.g. a Vercel proxy in front of this server) needs its own redirect URI;
+  // ALLOWED_ORIGINS already whitelists it for /mcp, so the same list drives the OAuth redirect allowlist.
+  const fronts = (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/$/, '')).filter(Boolean).map((o) => `${o}/`);
+  up.run('recall-radar-web', null, JSON.stringify([`${base}/`, ...fronts]), 'Recall Radar web client');
   up.run(process.env.ALEXA_CLIENT_ID || 'alexa-plus', process.env.ALEXA_CLIENT_SECRET || 'dev-secret', '[]', 'Alexa+ MCP add-on');
 }
 
