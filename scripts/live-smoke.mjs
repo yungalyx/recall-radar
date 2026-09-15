@@ -6,7 +6,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 const base = (process.argv[2] || '').replace(/\/$/, '');
-if (!base) { console.error('usage: node scripts/live-smoke.mjs <public-url>'); process.exit(2); }
+const front = process.argv[3] === '--front'; // a proxy/front-end origin: the issuer is the backend's URL, everything else must still work from here
+if (!base) { console.error('usage: node scripts/live-smoke.mjs <public-url> [--front]'); process.exit(2); }
 const fail = (m) => { console.error('FAIL', m); process.exit(1); };
 const form = (o) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(o) });
 
@@ -14,7 +15,7 @@ const health = await (await fetch(`${base}/health`)).json();
 console.log('health', health);
 const as = await (await fetch(`${base}/.well-known/oauth-authorization-server`)).json();
 console.log('issuer', as.issuer);
-if (as.issuer !== base) fail(`issuer is ${as.issuer}; PUBLIC_URL is not set to ${base}`);
+if (!front && as.issuer !== base) fail(`issuer is ${as.issuer}; PUBLIC_URL is not set to ${base}`);
 
 const verifier = randomBytes(32).toString('base64url');
 const q = { response_type: 'code', client_id: 'recall-radar-web', redirect_uri: `${base}/`, code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256', state: 's', scope: 'household' };
