@@ -9,8 +9,21 @@ const UA = 'recall-radar/0.1 (+https://github.com/yungalyx/recall-radar)';
 export function sinceDate() { const d = new Date(); d.setFullYear(d.getFullYear() - LOOKBACK_YEARS); return d.toISOString().slice(0, 10); }
 const today = () => new Date().toISOString().slice(0, 10);
 
-// ponytail: CPSC has ~450 recalls/year, so one bulk pull per TTL and local matching beats per-item queries (3 MB, ~1 s).
-export const cpscUrl = () => `https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=${sinceDate()}`;
+// ponytail: CPSC has ~450 recalls/year, so bulk pulls per TTL and local matching beat per-item queries (3 MB, ~1 s).
+// In one-year slices: on 2026-09-14 the single 3-year pull started failing server-side ("The underlying provider
+// failed on Open") while 1-year windows kept working. Each slice is cached on its own, so one bad year costs one year.
+export function cpscUrls() {
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const urls = [];
+  for (let i = 0; i < LOOKBACK_YEARS; i++) {
+    const to = new Date(); to.setFullYear(to.getFullYear() - i);
+    const from = new Date(); from.setFullYear(from.getFullYear() - i - 1); from.setDate(from.getDate() + 1);
+    urls.push(`https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=${iso(from)}&RecallDateEnd=${iso(to)}`);
+  }
+  return urls;
+}
+// SaferProducts reports its own failures as HTTP 200 with one placeholder row. That is an error, not a recall list.
+const isCpscError = (v) => Array.isArray(v) && v.length === 1 && v[0]?.RecallID === 0 && /^Error/i.test(v[0]?.Title || '');
 export const nhtsaUrl = (make, model, year) => `https://api.nhtsa.gov/recalls/recallsByVehicle?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${encodeURIComponent(year)}`;
 export const vpicUrl = (vin) => `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(vin)}?format=json`;
 export function fdaUrl(kind, terms, brand) {
@@ -32,9 +45,9 @@ export async function fetchCached(db, url) {
   if (res.status === 404) { db.prepare('insert or replace into recall_cache(url, body, fetched_at) values (?,?,?)').run(url, 'null', Date.now()); return null; }
   if (!res.ok) { if (row) return JSON.parse(row.body); throw new Error(`${res.status} from ${new URL(url).host}`); } // stale-if-error
   const body = await res.text();
-  JSON.parse(body); // throw before caching junk
+  const value = JSON.parse(body); // throw before caching junk
+  if (isCpscError(value)) { if (row) return JSON.parse(row.body); throw new Error(`error payload from ${new URL(url).host}`); } // stale-if-error, never cached
   db.prepare('insert or replace into recall_cache(url, body, fetched_at) values (?,?,?)').run(url, body, Date.now());
-  const value = JSON.parse(body);
   memo.set(url, { at: Date.now(), value });
   return value;
 }
@@ -96,7 +109,7 @@ export async function candidatesFor(db, item) {
   if (cat === 'vehicle') {
     jobs.push(guard(parseVehicle(db, item).then(async (v) => v ? ((await fetchCached(db, nhtsaUrl(v.make, v.model, v.year)))?.results || []).map(normalizeNhtsa) : [])));
   } else {
-    jobs.push(guard(fetchCached(db, cpscUrl()).then((rows) => (rows || []).map(normalizeCpsc))));
+    for (const u of cpscUrls()) jobs.push(guard(fetchCached(db, u).then((rows) => (rows || []).map(normalizeCpsc))));
     const kinds = { food: ['food'], drug: ['drug'], device: ['device'] }[cat] || [];
     for (const kind of kinds) jobs.push(guard(fetchCached(db, fdaUrl(kind, fdaTerms(item), item.brand)).then((j) => (j?.results || []).map(normalizeFda))));
   }

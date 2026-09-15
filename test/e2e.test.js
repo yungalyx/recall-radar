@@ -7,7 +7,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { start } from '../src/server.js';
-import { cpscUrl, nhtsaUrl } from '../src/recalls.js';
+import { cpscUrls, nhtsaUrl } from '../src/recalls.js';
 
 const fixture = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), 'utf8');
 let s, base, serviceToken;
@@ -19,7 +19,7 @@ before(async () => {
   s = await start({ port: 0, dbPath: ':memory:' });
   base = s.base;
   const seed = s.db.prepare('insert into recall_cache(url, body, fetched_at) values (?,?,?)');
-  seed.run(cpscUrl(), fixture('cpsc_graco.json'), Date.now());
+  cpscUrls().forEach((u, i) => seed.run(u, i ? '[]' : fixture('cpsc_graco.json'), Date.now())); // newest slice holds the fixture, older ones are empty
   seed.run(nhtsaUrl('Honda', 'Civic', '2020'), fixture('nhtsa_civic_2020.json'), Date.now());
   const r = await fetch(`${base}/token`, { ...form({ grant_type: 'client_credentials' }), headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: 'Basic ' + Buffer.from('alexa-plus:dev-secret').toString('base64') } });
   serviceToken = (await r.json()).access_token;

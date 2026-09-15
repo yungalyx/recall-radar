@@ -171,17 +171,18 @@ function say(text) {
 }
 
 // Float32 frames → 16-bit PCM, in an AudioWorklet so the page stays a single file.
+// Batched to ~100 ms: the worklet is called per 128-sample block (8 ms at 16 kHz) and AssemblyAI closes the
+// session with 3007 "Input Duration Violation" for anything under 50 ms. Only a real browser stream showed this.
 const PCM_WORKLET = URL.createObjectURL(new Blob([`
+const CHUNK = 1600; // samples = 100 ms at 16 kHz
 class PCM extends AudioWorkletProcessor {
+  constructor() { super(); this.buf = new Int16Array(CHUNK); this.n = 0; }
   process(inputs) {
     const ch = inputs[0][0];
-    if (ch) {
-      const pcm = new Int16Array(ch.length);
-      for (let i = 0; i < ch.length; i++) {
-        const s = Math.max(-1, Math.min(1, ch[i]));
-        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-      }
-      this.port.postMessage(pcm, [pcm.buffer]);
+    if (ch) for (let i = 0; i < ch.length; i++) {
+      const s = Math.max(-1, Math.min(1, ch[i]));
+      this.buf[this.n++] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      if (this.n === CHUNK) { this.port.postMessage(this.buf, [this.buf.buffer]); this.buf = new Int16Array(CHUNK); this.n = 0; }
     }
     return true;
   }
