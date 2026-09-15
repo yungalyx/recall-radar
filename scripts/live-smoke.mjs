@@ -29,11 +29,13 @@ const mcp = (body, extra = {}) => fetch(`${base}/mcp`, { method: 'POST', headers
 const init = await mcp({ jsonrpc: '2.0', id: 0, method: 'initialize', params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'live-smoke', version: '0' } } });
 if (init.status !== 200) fail(`/mcp initialize with browser Origin returned ${init.status}: ${(await init.text()).slice(0, 200)}`);
 const sid = init.headers.get('mcp-session-id');
-const sse = (t) => JSON.parse(t.split('\n').find((l) => l.startsWith('data:')).slice(5));
-console.log('mcp initialize ok, server', sse(await init.text()).result?.serverInfo);
+// Streamable HTTP lets the server answer a POST as plain JSON or as an SSE stream; accept both.
+const body = (t) => JSON.parse(t.trimStart().startsWith('{') ? t : t.split('\n').find((l) => l.startsWith('data:')).slice(5));
+console.log('mcp initialize ok, server', body(await init.text()).result?.serverInfo);
 await mcp({ jsonrpc: '2.0', method: 'notifications/initialized' }, { 'mcp-session-id': sid });
-const tools = sse(await (await mcp({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { 'mcp-session-id': sid })).text());
+const tools = body(await (await mcp({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, { 'mcp-session-id': sid })).text());
 console.log('tools', tools.result.tools.map((t) => t.name));
+await fetch(`${base}/mcp`, { method: 'DELETE', headers: { origin: base, authorization: `Bearer ${tok.access_token}`, 'mcp-session-id': sid } }); // leave no session behind
 const stt = await fetch(`${base}/stt-token`, { headers: { authorization: `Bearer ${tok.access_token}` } });
 console.log('stt-token', stt.status, stt.status === 200 ? 'voice live' : (await stt.json()).error);
 if (!health.voice) fail('voice is off: ASSEMBLYAI_API_KEY is not reaching the process');
